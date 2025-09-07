@@ -59,4 +59,4 @@ Feel free to open issues or submit pull requests to improve the tool!
 <img width="1853" height="870" alt="image" src="https://github.com/user-attachments/assets/75bb463d-636b-45ac-9d9b-b75fd48bff1e" />
 
 
-Made with ❤️ by Eska • 2025
+Made by Eska
