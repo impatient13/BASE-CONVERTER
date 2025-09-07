@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Convertisseur — Texte & Nombres</title>
+  <meta name="description" content="Outil pour convertir du texte (UTF‑8) en Base64/Base32/Hex et convertir des nombres entre bases 2 à 36." />
+  <link rel="icon" href="iresus.png">
+  <style>
+    :root{
+      --bg: #0b1220;            
+      --panel: rgba(255,255,255,0.08);
+      --panel-strong: rgba(255,255,255,0.12);
+      --text: #eaf2ff;
+      --muted: #b9c4da;
+      --brand1: #0ea5e9;        
+      --brand2: #8b5cf6;        
+      --ok: #22c55e;
+      --warn: #eab308;
+      --err: #ef4444;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font: 15px/1.5 ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+      color:var(--text); background: radial-gradient(1200px 800px at 10% -10%, rgba(14,165,233,0.18), transparent 40%), radial-gradient(1200px 800px at 110% 10%, rgba(139,92,246,0.18), transparent 40%), var(--bg);
+      display:flex; flex-direction:column; gap:18px;
+    }
+    header{
+      padding:24px clamp(16px, 5vw, 48px) 8px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+    }
+    .brand{display:flex; align-items:center; gap:14px}
+    .brand .logo{width:40px; height:40px; border-radius:12px; background: linear-gradient(135deg, var(--brand1), var(--brand2)); display:grid; place-items:center; box-shadow: var(--shadow)}
+    .brand .logo span{font-weight:800; letter-spacing:1px}
+    .brand h1{font-size:clamp(18px, 2.4vw, 28px); margin:0}
+    .muted{color:var(--muted)}
+    .chip{padding:6px 10px; border-radius:999px; background:linear-gradient(135deg, rgba(14,165,233,.18), rgba(139,92,246,.18)); border: 1px solid rgba(255,255,255,.15)}
+
+    .wrap{padding:0 clamp(16px, 5vw, 48px) 36px; display:grid; gap:20px; grid-template-columns: 1fr;}
+    @media(min-width: 980px){ .wrap{ grid-template-columns: 1fr 1fr; } }
+
+    .card{
+      background: backdrop-filter: blur(8px);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card header{ padding:16px 18px; border-bottom: 1px solid rgba(255,255,255,.08);}
+    .card h2{ margin:0; font-size: clamp(16px, 2vw, 22px); }
+    .content{ padding:18px; display:flex; flex-direction:column; gap:14px; }
+    .row{ display:grid; gap:12px; grid-template-columns: 1fr; }
+    @media(min-width:720px){ .row{ grid-template-columns: 1fr 1fr; } }
+
+    textarea, input, select{
+      width:100%; padding:12px 14px; background: rgba(255,255,255,.06);
+      color:var(--text); border:1px solid rgba(255,255,255,.16); border-radius: 12px; outline:none;
+    }
+    textarea{ min-height: 140px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; }
+
+    .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    button{ cursor:pointer; border:1px solid rgba(255,255,255,.18); background: linear-gradient(135deg, rgba(14,165,233,.2), rgba(139,92,246,.2)); color:var(--text); padding:10px 14px; border-radius:12px; font-weight:600; transition: transform .08s ease; }
+    button:hover{ transform: translateY(-1px); }
+    .ghost{ background: rgba(255,255,255,.06); }
+    .danger{ background: linear-gradient(135deg, rgba(239,68,68,.25), rgba(234,88,12,.25)); }
+
+    .grid-3{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+    .hint{ font-size:12px; color:var(--muted); }
+    .badge{ font-size: 12px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+
+    .footer{ padding: 0 clamp(16px, 5vw, 48px) 36px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; }
+    .link{ color: #a5b4fc; text-decoration: underline; text-underline-offset: 3px; }
+    .ok{ color: var(--ok) }
+    .warn{ color: var(--warn) }
+    .err{ color: var(--err) }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo"><span>IRS</span></div>
+      <div>
+        <h1>Convertisseur de Bases — <span class="muted">Texte & Nombres</span></h1>
+        <div class="chip">UTF‑8 • Base64 • Base32 • Hex • Bases 2→36</div>
+      </div>
+    </div>
+    <button id="toggle-theme" class="ghost" aria-label="Basculer le thème">🌙&nbsp;Thème</button>
+  </header>
+
+  <main class="wrap">
+    <section class="card" id="card-text">
+      <header>
+        <h2>Texte ↔ Encodage (bytes)</h2>
+      </header>
+      <div class="content">
+        <div class="row">
+          <div>
+            <label for="input-text" class="hint">Entrée</label>
+            <textarea id="input-text" placeholder="Saisis ton texte (UTF‑8) ou une chaîne encodée…"></textarea>
+          </div>
+          <div>
+            <label for="output-text" class="hint">Sortie</label>
+            <textarea id="output-text" placeholder="Résultat…" readonly></textarea>
+          </div>
+        </div>
+        <div class="controls">
+          <select id="encoding">
+            <option value="base64">Base64</option>
+            <option value="base32">Base32 (RFC4648)</option>
+            <option value="hex">Hex (Base16)</option>
+          </select>
+          <select id="direction">
+            <option value="encode">Texte → Encodé</option>
+            <option value="decode">Encodé → Texte</option>
+          </select>
+          <button id="btn-run">Convertir</button>
+          <button id="btn-swap" class="ghost">↔️ Inverser</button>
+          <button id="btn-copy" class="ghost">📋 Copier</button>
+          <button id="btn-clear" class="danger">🧹 Effacer</button>
+        </div>
+        <div id="status" class="hint">Prend en charge tous les caractères (UTF‑8), y compris emojis</div>
+      </div>
+    </section>
+
+    <section class="card" id="card-number">
+      <header>
+        <h2>Conversion de nombres entre bases (2 → 36)</h2>
+      </header>
+      <div class="content">
+        <div class="row">
+          <div>
+            <label class="hint" for="num-in">Nombre d'entrée</label>
+            <input id="num-in" placeholder="Ex: ff" />
+          </div>
+          <div class="grid-3">
+            <div>
+              <label class="hint" for="base-from">Base entrée</label>
+              <input id="base-from" type="number" min="2" max="36" value="16" />
+            </div>
+            <div>
+              <label class="hint" for="base-to">Base sortie</label>
+              <input id="base-to" type="number" min="2" max="36" value="10" />
+            </div>
+            <div>
+              <label class="hint" for="num-out">Résultat</label>
+              <input id="num-out" readonly placeholder="255" />
+            </div>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="btn-num-run">Convertir</button>
+          <button id="btn-num-swap" class="ghost">↔️ Inverser</button>
+          <span id="num-status" class="hint"></span>
+        </div>
+        <div class="row">
+          <div>
+            <div class="hint">Raccourcis utiles</div>
+            <div class="controls">
+              <button class="ghost" data-quick="bin">binaire</button>
+              <button class="ghost" data-quick="oct">octal</button>
+              <button class="ghost" data-quick="dec">décimal</button>
+              <button class="ghost" data-quick="hex">hexadécimal</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">
+    <span>Made by Eska • 2025</span>
+    <span class="badge">Astuce: Ctrl/⌘+Enter pour convertir rapidement</span>
+  </div>
+
+  <script>
+
+    const te = new TextEncoder();
+    const td = new TextDecoder();
+
+    function bytesToHex(bytes){
+      return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    function hexToBytes(hex){
+      const clean = hex.trim().replace(/^0x/i,'');
+      if(clean.length % 2 !== 0) throw new Error('Longueur hex impaire');
+      const out = new Uint8Array(clean.length/2);
+      for(let i=0;i<out.length;i++){
+        const byte = parseInt(clean.slice(i*2, i*2+2), 16);
+        if(Number.isNaN(byte)) throw new Error('Caractère hex invalide');
+        out[i] = byte;
+      }
+      return out;
+    }
+
+
+    function bytesToBase64(bytes){
+      let bin = '';
+      for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    }
+    function base64ToBytes(b64){
+      const bin = atob(b64.replace(/\s+/g,''));
+      const out = new Uint8Array(bin.length);
+      for (let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    const B32_ALPH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    const B32_LOOKUP = Object.fromEntries([...B32_ALPH].map((c,i)=>[c,i]));
+    function bytesToBase32(bytes){
+      let bits = 0, value = 0, output = '';
+      for (let i=0;i<bytes.length;i++){
+        value = (value << 8) | bytes[i];
+        bits += 8;
+        while (bits >= 5){
+          output += B32_ALPH[(value >>> (bits - 5)) & 31];
+          bits -= 5;
+        }
+      }
+      if (bits > 0){ output += B32_ALPH[(value << (5 - bits)) & 31]; }
+      while (output.length % 8 !== 0) output += '=';
+      return output;
+    }
+    function base32ToBytes(str){
+      const clean = str.toUpperCase().replace(/=+$/,'').replace(/\s+/g,'');
+      let bits = 0, value = 0, index = 0;
+      const out = [];
+      for (const ch of clean){
+        const v = B32_LOOKUP[ch];
+        if (v === undefined) throw new Error('Caractère Base32 invalide');
+        value = (value << 5) | v; bits += 5;
+        if (bits >= 8){
+          out.push((value >>> (bits - 8)) & 255);
+          bits -= 8;
+        }
+      }
+      return new Uint8Array(out);
+    }
+
+    const $ = (s, el=document) => el.querySelector(s);
+    const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+
+    const inputText = $('#input-text');
+    const outputText = $('#output-text');
+    const encodingSel = $('#encoding');
+    const directionSel = $('#direction');
+    const statusEl = $('#status');
+
+    function runText(){
+      const mode = encodingSel.value; 
+      const dir = directionSel.value; 
+      try{
+        if(dir === 'encode'){
+          const bytes = te.encode(inputText.value);
+          switch(mode){
+            case 'base64': outputText.value = bytesToBase64(bytes); break;
+            case 'base32': outputText.value = bytesToBase32(bytes); break;
+            case 'hex': outputText.value = bytesToHex(bytes); break;
+          }
+          statusEl.innerHTML = `<span class="ok">Encodé (${mode})</span> — ${bytes.length} octets`;
+        }else{
+          let bytes;
+          switch(mode){
+            case 'base64': bytes = base64ToBytes(inputText.value); break;
+            case 'base32': bytes = base32ToBytes(inputText.value); break;
+            case 'hex': bytes = hexToBytes(inputText.value); break;
+          }
+          outputText.value = td.decode(bytes);
+          statusEl.innerHTML = `<span class="ok">Décodé (${mode})</span> — ${bytes.length} octets`;
+        }
+      }catch(err){
+        outputText.value = '';
+        statusEl.innerHTML = `<span class="err">Erreur:</span> ${err.message}`;
+      }
+    }
+
+    $('#btn-run').addEventListener('click', runText);
+    $('#btn-swap').addEventListener('click', () => {
+      const tmp = inputText.value; inputText.value = outputText.value; outputText.value = tmp;
+      directionSel.value = directionSel.value === 'encode' ? 'decode' : 'encode';
+      runText();
+    });
+    $('#btn-copy').addEventListener('click', async () => {
+      try{ await navigator.clipboard.writeText(outputText.value || ''); statusEl.textContent = '📋 Copié dans le presse‑papiers'; }
+      catch{ statusEl.textContent = 'Impossible de copier (permissions)'; }
+    });
+    $('#btn-clear').addEventListener('click', () => { inputText.value=''; outputText.value=''; statusEl.textContent='Nettoyé.'; inputText.focus(); });
+
+    document.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ runText(); }
+    });
+
+    const numIn = $('#num-in');
+    const baseFrom = $('#base-from');
+    const baseTo = $('#base-to');
+    const numOut = $('#num-out');
+    const numStatus = $('#num-status');
+
+    function runNumber(){
+      const a = parseInt(baseFrom.value, 10);
+      const b = parseInt(baseTo.value, 10);
+      const value = numIn.value.trim();
+      if(!(a>=2 && a<=36 && b>=2 && b<=36)){
+        numStatus.innerHTML = '<span class="warn">Bases autorisées: 2 à 36</span>';
+        numOut.value = '';
+        return;
+      }
+      const n = parseInt(value, a);
+      if(Number.isNaN(n)){
+        numStatus.innerHTML = '<span class="err">Entrée invalide pour la base sélectionnée</span>';
+        numOut.value = '';
+        return;
+      }
+      numOut.value = n.toString(b);
+      numStatus.innerHTML = `<span class="ok">${value}</span> (base ${a}) = <span class="ok">${numOut.value}</span> (base ${b})`;
+    }
+
+    $('#btn-num-run').addEventListener('click', runNumber);
+    $('#btn-num-swap').addEventListener('click', () => {
+      const tmp = baseFrom.value; baseFrom.value = baseTo.value; baseTo.value = tmp; runNumber();
+    });
+    $$('button[data-quick]').forEach(btn => btn.addEventListener('click', () => {
+      const type = btn.dataset.quick;
+      if(type==='bin'){ baseFrom.value = 2; baseTo.value = 10; numIn.value = '1010'; }
+      if(type==='oct'){ baseFrom.value = 8; baseTo.value = 10; numIn.value = '17'; }
+      if(type==='dec'){ baseFrom.value = 10; baseTo.value = 16; numIn.value = '255'; }
+      if(type==='hex'){ baseFrom.value = 16; baseTo.value = 10; numIn.value = 'ff'; }
+      runNumber();
+    }));
+
+    const themeBtn = document.getElementById('toggle-theme');
+    function applyTheme(mode){
+      const light = mode === 'light';
+      document.documentElement.style.setProperty('--bg', light? '#f6f7fb': '#0b1220');
+      document.documentElement.style.setProperty('--text', light? '#0b1220': '#eaf2ff');
+      document.body.classList.toggle('light', light);
+      themeBtn.textContent = light ? '☀️ Thème' : '🌙 Thème';
+    }
+    const savedTheme = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light':'dark');
+    applyTheme(savedTheme);
+    themeBtn.addEventListener('click', ()=>{
+      const next = (localStorage.getItem('theme') === 'light') ? 'dark' : 'light';
+      localStorage.setItem('theme', next); applyTheme(next);
+    });
+
+    inputText.value = 'Texte → Base64 / Base32 / Hex';
+  </script>
+</body>
+</html>
